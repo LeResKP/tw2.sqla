@@ -71,6 +71,35 @@ class ElixirBase(object):
             def __unicode__(self):
                 return self.name
 
+        class Entity(el.EntityBase):
+            __metaclass__ = tws.ElixirEntityMeta
+
+        class DbTestCls10(Entity):
+            el.using_options(inheritance='multi', tablename='test10')
+            id = el.Field(el.Integer, primary_key=True)
+            name = tws.TwsConfig(
+                        el.Field(el.String),
+                        viewable=True,
+                        editable=False,
+                    )
+            firstname = tws.TwsConfig(
+                        el.Field(el.String),
+                        viewable=True,
+                        editable=True,
+                    )
+        class DbTestCls11(DbTestCls10):
+            el.using_options(inheritance='multi', tablename='test11')
+            id = el.Field(el.Integer, sa.ForeignKey('test10.id'), primary_key=True)
+            name = tws.TwsConfig(
+                    viewable=False,
+                    editable=False,
+                    )
+            surname = tws.TwsConfig(
+                        el.Field(el.String),
+                        viewable=True,
+                        editable=True,
+                    )
+
         self.DbTestCls1 = DbTestCls1
         self.DbTestCls2 = DbTestCls2
         self.DbTestCls3 = DbTestCls3
@@ -80,6 +109,8 @@ class ElixirBase(object):
         self.DbTestCls7 = DbTestCls7
         self.DbTestCls8 = DbTestCls8
         self.DbTestCls9 = DbTestCls9
+        self.DbTestCls10 = DbTestCls10
+        self.DbTestCls11 = DbTestCls11
 
         el.setup_all()
         el.metadata.create_all()
@@ -113,7 +144,8 @@ class ElixirBase(object):
 class SQLABase(object):
     def setup(self):
         self.session = tws.transactional_session()
-        Base = declarative_base(metadata=sa.MetaData('sqlite:///:memory:'))
+        Base = declarative_base(metadata=sa.MetaData('sqlite:///:memory:'),
+                metaclass=tws.SqlaDeclarativeMeta)
         Base.query = self.session.query_property()
 
         class DbTestCls1(Base):
@@ -181,6 +213,32 @@ class SQLABase(object):
             def __unicode__(self):
                 return self.name
 
+        class DbTestCls10(Base):
+            __tablename__ = 'Test10'
+            id = sa.Column(sa.Integer, primary_key=True)
+            name = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        viewable=True,
+                        editable=False,
+                    )
+            firstname = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        viewable=True,
+                        editable=True,
+                    )
+
+        class DbTestCls11(DbTestCls10):
+            __tablename__ = 'Test11'
+            id = sa.Column(sa.Integer, sa.ForeignKey('Test10.id'), primary_key=True)
+            name = tws.TwsConfig(
+                    viewable=False,
+                    editable=False,
+                    )
+            surname = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        viewable=True,
+                        editable=True,
+                    )
 
         self.DbTestCls1 = DbTestCls1
         self.DbTestCls2 = DbTestCls2
@@ -191,6 +249,8 @@ class SQLABase(object):
         self.DbTestCls7 = DbTestCls7
         self.DbTestCls8 = DbTestCls8
         self.DbTestCls9 = DbTestCls9
+        self.DbTestCls10 = DbTestCls10
+        self.DbTestCls11 = DbTestCls11
 
         Base.metadata.create_all()
 
@@ -1494,6 +1554,69 @@ class AutoTableFormT7(WidgetTest):
 class TestAutoTableForm7Elixir(ElixirBase, AutoTableFormT7): pass
 class TestAutoTableForm7SQLA(SQLABase, AutoTableFormT7): pass
 
+class AutoTableFormT10(WidgetTest):
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls10)
+        return super(AutoTableFormT10, self).setup()
+
+    widget = tws.AutoTableForm
+    attrs = { 'id' : 'foo_form' }
+    expected = """
+<form method="post" id="foo_form:form" enctype="multipart/form-data">
+     <span class="error"></span>
+    <table id="foo_form">
+    <tr class="odd" id="foo_form:firstname:container">
+        <th>Firstname</th>
+        <td>
+            <input name="foo_form:firstname" id="foo_form:firstname" type="text" />
+            <span id="foo_form:firstname:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="foo_form:error"></span>
+    </td></tr>
+</table>
+    <input type="submit" id="submit" value="Save" />
+</form>
+"""
+
+class TestAutoTableForm10Elixir(ElixirBase, AutoTableFormT10): pass
+class TestAutoTableForm10SQLA(SQLABase, AutoTableFormT10): pass
+
+class AutoTableFormT11(WidgetTest):
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls11)
+        return super(AutoTableFormT11, self).setup()
+
+    widget = tws.AutoTableForm
+    attrs = { 'id' : 'foo_form' }
+    expected = """
+<form method="post" id="foo_form:form" enctype="multipart/form-data">
+     <span class="error"></span>
+    <table id="foo_form">
+    <tr class="odd" id="foo_form:firstname:container">
+        <th>Firstname</th>
+        <td>
+            <input name="foo_form:firstname" id="foo_form:firstname" type="text" />
+            <span id="foo_form:firstname:error"></span>
+        </td>
+    </tr><tr class="even" id="foo_form:surname:container">
+        <th>Surname</th>
+        <td>
+            <input name="foo_form:surname" id="foo_form:surname" type="text" />
+            <span id="foo_form:surname:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="foo_form:error"></span>
+    </td></tr>
+</table>
+    <input type="submit" id="submit" value="Save" />
+</form>
+"""
+
+class TestAutoTableForm11Elixir(ElixirBase, AutoTableFormT11): pass
+class TestAutoTableForm11SQLA(SQLABase, AutoTableFormT11): pass
 
 class AutoViewGridT(WidgetTest):
     def setup(self):
@@ -1513,6 +1636,41 @@ class AutoViewGridT(WidgetTest):
 class TestAutoViewGridElixir(ElixirBase, AutoViewGridT): pass
 class TestAutoViewGridSQLA(SQLABase, AutoViewGridT): pass
 
+class AutoViewGrid10T(WidgetTest):
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls10)
+        return super(AutoViewGrid10T, self).setup()
+
+    widget = tws.AutoViewGrid
+    attrs = { 'id' : 'autogrid' }
+
+    expected = """
+    <table id="autogrid">
+    <tr><th>Name</th><th>Firstname</th></tr>
+    <tr class="error"><td colspan="0" id="autogrid:error">
+    </td></tr>
+    </table>"""
+
+class TestAutoViewGrid10Elixir(ElixirBase, AutoViewGrid10T): pass
+class TestAutoViewGrid10SQLA(SQLABase, AutoViewGrid10T): pass
+
+class AutoViewGrid11T(WidgetTest):
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls11)
+        return super(AutoViewGrid11T, self).setup()
+
+    widget = tws.AutoViewGrid
+    attrs = { 'id' : 'autogrid' }
+
+    expected = """
+    <table id="autogrid">
+    <tr><th>Firstname</th><th>Surname</th></tr>
+    <tr class="error"><td colspan="0" id="autogrid:error">
+    </td></tr>
+    </table>"""
+
+class TestAutoViewGrid11Elixir(ElixirBase, AutoViewGrid11T): pass
+class TestAutoViewGrid11SQLA(SQLABase, AutoViewGrid11T): pass
 
 class AutoGrowingGridT(WidgetTest):
     def setup(self):

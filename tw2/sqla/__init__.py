@@ -8,3 +8,7 @@ from widgets import (
     NoWidget)
 import utils
 import widgets
+from dbobject import (
+    TwsConfig, 
+    ElixirEntityMeta, SqlaDeclarativeMeta,
+    )

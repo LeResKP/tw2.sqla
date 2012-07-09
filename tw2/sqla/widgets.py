@@ -415,6 +415,11 @@ class WidgetPolicy(object):
         If the property does not match any of the other selectors, this is used.
         If this is None then an error is raised for properties that do not match.
 
+    `displayable_config_name`
+        The config property name to use to know if the field is displayable.
+        If existing this property is attached to the entity in a dict named
+        _tws_config
+
     Alternatively, the `factory` method can be overriden to provide completely
     customised widget selection.
     """
@@ -426,6 +431,7 @@ class WidgetPolicy(object):
     name_widgets = {}
     type_widgets = {}
     default_widget = None
+    displayable_config_name = None 
 
     @classmethod
     def factory(cls, prop):
@@ -494,6 +500,7 @@ class ViewPolicy(WidgetPolicy):
     """Base WidgetPolicy for viewing data."""
     manytoone_widget = twf.LabelField
     default_widget = twf.LabelField
+    displayable_config_name = 'viewable'
 
     ## This gets assigned further down in the file.  It must, because of an
     ## otherwise circular dependency.
@@ -523,6 +530,7 @@ class EditPolicy(WidgetPolicy):
         sat.Binary:     twf.FileField,
         sat.Boolean:    twf.CheckBox,
     }
+    displayable_config_name = 'editable'
 
 
 class AutoContainer(twc.Widget):
@@ -560,7 +568,15 @@ class AutoContainer(twc.Widget):
             properties.sort(sort_properties(localname_from_relationname,
                 localname_creation_order))
             reverse_property_name = getattr(cls, 'reverse_property_name', None)
+
+            cls_config = getattr(cls.entity, '_tws_config', {})
             for prop in properties:
+                if getattr(prop, '_is_polymorphic_discriminator', False):
+                    continue
+
+                if prop.key in cls_config:
+                    if getattr(cls_config[prop.key], cls.policy.displayable_config_name) == False:
+                        continue
 
                 # Swap ids and objs
                 if fkey.get(prop.key):
