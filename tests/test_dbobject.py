@@ -1,4 +1,4 @@
-import tw2.core as twc, tw2.sqla as tws, sqlalchemy as sa
+import tw2.core as twc, tw2.sqla as tws, sqlalchemy as sa, tw2.forms as twf
 import testapi
 
 
@@ -20,6 +20,14 @@ class BaseObject(object):
         assert(config['name'].viewable == False)
         assert(config['surname'].editable == True)
         assert(config['surname'].viewable == False)
+
+    def test_widget_and_validator(self):
+        config = self.DbTestCls3._tws_config
+        assert(len(config) == 3)
+        assert(config['pwd'].widget_cls == twf.PasswordField)
+        assert(config['pwd'].validator_cls == None)
+        assert(config['emailaddress'].widget_cls == None)
+        assert(config['emailaddress'].validator_cls == twc.EmailValidator)
 
     def test_automatic_id(self):
         assert(type(self.DbTestCls3.id) == property)
@@ -65,6 +73,14 @@ class TestElixir(BaseObject):
                         viewable=True,
                         editable=False,
                     )
+            pwd = tws.TwsConfig(
+                        el.Field(el.String),
+                        widget_cls=twf.PasswordField
+                        )
+            emailaddress = tws.TwsConfig(
+                        el.Field(el.String),
+                        validator_cls=twc.EmailValidator
+                        )
         
         self.DbTestCls1 = DbTestCls1
         self.DbTestCls2 = DbTestCls2
@@ -114,6 +130,14 @@ class TestSQLA(BaseObject):
                         viewable=True,
                         editable=False,
                     )
+            pwd = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        widget_cls=twf.PasswordField
+                    )
+            emailaddress = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        validator_cls=twc.EmailValidator
+                        )
 
         self.DbTestCls1 = DbTestCls1
         self.DbTestCls2 = DbTestCls2

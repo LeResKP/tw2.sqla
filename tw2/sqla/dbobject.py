@@ -16,7 +16,13 @@ class TwsConfig(object):
                 )
     """
 
-    def __init__(self, field=None, viewable=True, editable=True):
+    def __init__(self, 
+            field=None, 
+            viewable=True, 
+            editable=True,
+            widget_cls=None,
+            validator_cls=None
+            ):
         self.__dict__.update(locals())
 
 

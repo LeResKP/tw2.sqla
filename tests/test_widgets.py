@@ -100,6 +100,22 @@ class ElixirBase(object):
                         editable=True,
                     )
 
+        class DbTestCls12(Entity):
+            iduser = el.Field(el.Integer, primary_key=True)
+            name = tws.TwsConfig(
+                        el.Field(el.String),
+                        viewable=True,
+                        editable=False,
+                    )
+            pwd = tws.TwsConfig(
+                        el.Field(el.String),
+                        widget_cls=twf.PasswordField
+                        )
+            emailaddress = tws.TwsConfig(
+                        el.Field(el.String, required=True),
+                        validator_cls=twc.EmailValidator
+                        )
+
         self.DbTestCls1 = DbTestCls1
         self.DbTestCls2 = DbTestCls2
         self.DbTestCls3 = DbTestCls3
@@ -111,6 +127,7 @@ class ElixirBase(object):
         self.DbTestCls9 = DbTestCls9
         self.DbTestCls10 = DbTestCls10
         self.DbTestCls11 = DbTestCls11
+        self.DbTestCls12 = DbTestCls12
 
         el.setup_all()
         el.metadata.create_all()
@@ -240,6 +257,23 @@ class SQLABase(object):
                         editable=True,
                     )
 
+        class DbTestCls12(Base):
+            __tablename__ = 'Test12'
+            iduser = sa.Column(sa.Integer, primary_key=True)
+            name = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        viewable=True,
+                        editable=False,
+                    )
+            pwd = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        widget_cls=twf.PasswordField
+                    )
+            emailaddress = tws.TwsConfig(
+                        sa.Column(sa.String(50), nullable=False),
+                        validator_cls=twc.EmailValidator
+                        )
+
         self.DbTestCls1 = DbTestCls1
         self.DbTestCls2 = DbTestCls2
         self.DbTestCls3 = DbTestCls3
@@ -251,6 +285,7 @@ class SQLABase(object):
         self.DbTestCls9 = DbTestCls9
         self.DbTestCls10 = DbTestCls10
         self.DbTestCls11 = DbTestCls11
+        self.DbTestCls12 = DbTestCls12
 
         Base.metadata.create_all()
 
@@ -1025,7 +1060,7 @@ class AutoListPageT(WidgetTest):
             sa.orm.class_mapper(self.DbTestCls2).iterate_properties)
         assert(len(props) == 1)
         try:
-            w = WackPolicy.factory(props[0])
+            w = WackPolicy.factory(props[0], config={})
             assert(False)
         except twc.WidgetError, e:
             assert(str(e) == "Cannot automatically create a widget " +
@@ -1039,7 +1074,7 @@ class AutoListPageT(WidgetTest):
             sa.orm.class_mapper(self.DbTestCls1).iterate_properties)
         assert(len(props) == 1)
         try:
-            w = WackPolicy.factory(props[0])
+            w = WackPolicy.factory(props[0], config={})
             assert(False)
         except twc.WidgetError, e:
             assert(str(e) == "Cannot automatically create a widget " +
@@ -1053,7 +1088,7 @@ class AutoListPageT(WidgetTest):
             sa.orm.class_mapper(self.DbTestCls9).iterate_properties)
         assert(len(props) == 1)
         try:
-            w = WackPolicy.factory(props[0])
+            w = WackPolicy.factory(props[0], config={})
             assert(False)
         except twc.WidgetError, e:
             assert(str(e) == "Cannot automatically create a widget " +
@@ -1067,7 +1102,7 @@ class AutoListPageT(WidgetTest):
             sa.orm.class_mapper(self.DbTestCls1).iterate_properties)
         assert(len(props) == 1)
         try:
-            w = WackPolicy.factory(props[0])
+            w = WackPolicy.factory(props[0], config={})
             assert(False)
         except twc.WidgetError, e:
             assert(str(e) == "Cannot automatically create a widget for 'name'")
@@ -1081,7 +1116,7 @@ class AutoListPageT(WidgetTest):
             sa.orm.class_mapper(self.DbTestCls1).iterate_properties)
         assert(len(props) == 1)
         try:
-            w = AwesomePolicy.factory(props[0])
+            w = AwesomePolicy.factory(props[0], config={})
         except twc.WidgetError, e:
             assert(False)
 
@@ -1094,7 +1129,7 @@ class AutoListPageT(WidgetTest):
             sa.orm.class_mapper(self.DbTestCls1).iterate_properties)
         assert(len(props) == 1)
         try:
-            w = AwesomePolicy.factory(props[0])
+            w = AwesomePolicy.factory(props[0], config={})
         except twc.WidgetError, e:
             assert(False)
 
@@ -1212,7 +1247,6 @@ class AutoListPageT(WidgetTest):
 
 class TestAutoListPageElixir(ElixirBase, AutoListPageT): pass
 class TestAutoListPageSQLA(SQLABase, AutoListPageT): pass
-
 
 class AutoListPageOneToOneRelationT(WidgetTest):
     def setup(self):
@@ -1617,6 +1651,62 @@ class AutoTableFormT11(WidgetTest):
 
 class TestAutoTableForm11Elixir(ElixirBase, AutoTableFormT11): pass
 class TestAutoTableForm11SQLA(SQLABase, AutoTableFormT11): pass
+
+class AutoTableFormT12(WidgetTest):
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls12)
+        return super(AutoTableFormT12, self).setup()
+
+    widget = tws.AutoTableForm
+    attrs = { 'id' : 'foo_form' }
+    expected = """
+<form method="post" id="foo_form:form" enctype="multipart/form-data">
+     <span class="error"></span>
+    <table id="foo_form">
+    <tr class="odd" id="foo_form:pwd:container">
+        <th>Pwd</th>
+        <td>
+            <input name="foo_form:pwd" type="password" id="foo_form:pwd" />
+            <span id="foo_form:pwd:error"></span>
+        </td>
+    </tr><tr class="even required" id="foo_form:emailaddress:container">
+        <th>Emailaddress</th>
+        <td>
+            <input name="foo_form:emailaddress" type="text" id="foo_form:emailaddress" />
+            <span id="foo_form:emailaddress:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="foo_form:error"></span>
+    </td></tr>
+</table>
+    <input type="submit" id="submit" value="Save" />
+</form>
+"""
+
+    declarative = True
+    def test_validation(self):
+        value = self.widget.validate({'foo_form': {'emailaddress': 'plop@plop.fr'}})
+        assert(value == {'emailaddress': 'plop@plop.fr'})
+
+    def test_validation_required(self):
+        try:
+            value = self.widget.validate({'foo_form': {'emailaddress': ''}})
+            assert(False)
+        except twc.ValidationError, ve:
+            # The exception is raise but it's very strange that the error was lost
+            assert(ve.widget.error_msg == '')
+
+    def test_validation_invalid(self):
+        try:
+            value = self.widget.validate({'foo_form': {'emailaddress': 'plop'}})
+            assert(False)
+        except twc.ValidationError, ve:
+            # The exception is raise but it's very strange that the error was lost
+            assert(ve.widget.error_msg == '')
+        
+class TestAutoTableForm12Elixir(ElixirBase, AutoTableFormT12): pass
+class TestAutoTableForm12SQLA(SQLABase, AutoTableFormT12): pass
 
 class AutoViewGridT(WidgetTest):
     def setup(self):

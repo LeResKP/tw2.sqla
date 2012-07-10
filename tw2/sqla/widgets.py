@@ -420,6 +420,10 @@ class WidgetPolicy(object):
         If existing this property is attached to the entity in a dict named
         _tws_config
 
+    `config_available`
+        If True, we can use the widget and the validator defined in the
+        TwsConfig objects
+
     Alternatively, the `factory` method can be overriden to provide completely
     customised widget selection.
     """
@@ -432,16 +436,28 @@ class WidgetPolicy(object):
     type_widgets = {}
     default_widget = None
     displayable_config_name = None 
+    config_available = False
 
     @classmethod
-    def factory(cls, prop):
+    def factory(cls, prop, config):
         widget = None
-        if is_onetomany(prop):
+
+        widget_cls = None
+        validator_cls = None
+        if config and config.get(prop.key) and cls.config_available:
+            prop_config = config.get(prop.key, {})
+            widget_cls = prop_config.widget_cls
+            validator_cls = prop_config.validator_cls
+
+        if widget_cls:
+            # Get the widget from the config first
+            widget = widget_cls
+        elif is_onetomany(prop):
             if not cls.onetomany_widget:
                 raise twc.WidgetError(
                     "Cannot automatically create a widget " +
                     "for one-to-many relation '%s'" % prop.key)
-            widget = cls.onetomany_widget(id=prop.key,entity=prop.mapper.class_, required=required_widget(prop))
+            widget = cls.onetomany_widget
         elif sum([c.primary_key for c in getattr(prop, 'columns', [])]):
             widget = cls.pkey_widget
         elif is_manytoone(prop):
@@ -449,25 +465,20 @@ class WidgetPolicy(object):
                 raise twc.WidgetError(
                     "Cannot automatically create a widget " +
                     "for many-to-one relation '%s'" % prop.key)
-            widget = cls.manytoone_widget(id=prop.key,entity=prop.mapper.class_, required=required_widget(prop))
+            widget = cls.manytoone_widget
         elif is_manytomany(prop):
             # Use the same widget as onetomany
             if not cls.onetomany_widget:
                 raise twc.WidgetError(
                     "Cannot automatically create a widget " +
                     "for many-to-many relation '%s'" % prop.key)
-            widget = cls.onetomany_widget(id=prop.key,entity=prop.mapper.class_, required=required_widget(prop))
+            widget = cls.onetomany_widget
         elif is_onetoone(prop):
             if not cls.onetoone_widget:
                 raise twc.WidgetError(
                     "Cannot automatically create a widget " +
                     "for one-to-one relation '%s'" % prop.key)
-            widget = cls.onetoone_widget(
-                        id=prop.key,
-                        entity=prop.mapper.class_, 
-                        required=required_widget(prop), 
-                        reverse_property_name=get_reverse_property_name(prop)
-                    )
+            widget = cls.onetoone_widget
         elif prop.key in cls.name_widgets:
             widget = cls.name_widgets[prop.key]
         else:
@@ -485,7 +496,19 @@ class WidgetPolicy(object):
 
         if widget:
             args = {'id': prop.key}
-            if required_widget(prop):
+            required = required_widget(prop)
+            if is_relation(prop):
+                args.update(dict(entity=prop.mapper.class_, required=required))
+                if is_onetoone(prop):
+                    args.update(dict(reverse_property_name=get_reverse_property_name(prop)))
+                if validator_cls:
+                    # The validator should be defined in the widget.
+                    raise twc.WidgetError(
+                        "validator_cls is not supported " +
+                        "for '%s'" % prop.key)
+            elif validator_cls:
+                args['validator'] = validator_cls(required=required)
+            elif required:
                 args['validator'] = twc.Required
             widget = widget(**args)
 
@@ -513,6 +536,9 @@ class EditPolicy(WidgetPolicy):
     # TODO -- actually set this to something sensible
     onetomany_widget = DbCheckBoxList
     manytoone_widget = DbSingleSelectField
+
+    # We can use the widget and the validator defined in the TwsConfig objects
+    config_available = True
 
     ## This gets assigned further down in the file.  It must, because of an
     ## otherwise circular dependency.
@@ -597,7 +623,7 @@ class AutoContainer(twc.Widget):
                         new_children.append(widget)
                     used_children.add(widget_name)
                 else:
-                    new_widget = cls.policy.factory(prop)
+                    new_widget = cls.policy.factory(prop, cls_config)
                     if new_widget:
                         new_children.append(new_widget)
 
