@@ -21,7 +21,8 @@ class TwsConfig(object):
             viewable=True, 
             editable=True,
             widget_cls=None,
-            validator_cls=None
+            validator_cls=None,
+            tabname=None,
             ):
         self.__dict__.update(locals())
 

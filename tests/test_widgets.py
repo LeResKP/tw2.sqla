@@ -116,6 +116,52 @@ class ElixirBase(object):
                         validator_cls=twc.EmailValidator
                         )
 
+        class DbTestCls13(Entity):
+            __tablename__ = 'Test13'
+            iduser = el.Field(el.Integer, primary_key=True)
+            emailaddress = tws.TwsConfig(
+                        el.Field(el.String, required=True),
+                        validator_cls=twc.EmailValidator
+                        )
+            pwd = tws.TwsConfig(
+                        el.Field(el.String),
+                        widget_cls=twf.PasswordField
+                    )
+            age = tws.TwsConfig(
+                        el.Field(el.String),
+                        tabname='Account',
+                    )
+            postalcode = tws.TwsConfig(
+                        el.Field(el.String),
+                        tabname='Contact information',
+                    )
+            country = tws.TwsConfig(
+                        el.Field(el.String),
+                        tabname='Contact information',
+                    )
+
+            account = tws.TwsConfig(
+                        el.OneToOne('DbTestCls14', inverse='user'),
+                        tabname='Account',
+                    )
+
+            def __unicode__(self):
+                return self.emailaddress
+
+        class DbTestCls14(Entity):
+            __tablename__ = 'Test14'
+            account_id = el.Field(el.Integer, primary_key=True)
+            account_name = el.Field(el.String)
+            account_number = tws.TwsConfig(
+                                el.Field(el.String),
+                                tabname='Tab 1',
+                            )
+            iduser = el.Field(el.Integer, required=True)
+            user = el.ManyToOne(DbTestCls13, field=iduser, inverse='account', uselist=False)
+
+            def __unicode__(self):
+                return self.account_name
+
         self.DbTestCls1 = DbTestCls1
         self.DbTestCls2 = DbTestCls2
         self.DbTestCls3 = DbTestCls3
@@ -128,6 +174,8 @@ class ElixirBase(object):
         self.DbTestCls10 = DbTestCls10
         self.DbTestCls11 = DbTestCls11
         self.DbTestCls12 = DbTestCls12
+        self.DbTestCls13 = DbTestCls13
+        self.DbTestCls14 = DbTestCls14
 
         el.setup_all()
         el.metadata.create_all()
@@ -154,6 +202,18 @@ class ElixirBase(object):
         bob1 = self.DbTestCls9(id=1, name='bob1', account_id=2)
         assert(self.DbTestCls8.query.first().user == bob1)
         assert(self.DbTestCls9.query.first().account == account1)
+        user = self.DbTestCls13(
+                iduser=1,
+                emailaddress='bob@plop.fr', 
+                pwd='my pass',
+                age=31,
+                postalcode='75012',
+                country='France')
+        self.DbTestCls14(
+                account_id=1,
+                account_name='My account',
+                account_number='123456',
+                user=user)
         transaction.commit()
 
         return super(ElixirBase, self).setup()
@@ -274,6 +334,51 @@ class SQLABase(object):
                         validator_cls=twc.EmailValidator
                         )
 
+        class DbTestCls13(Base):
+            __tablename__ = 'Test13'
+            iduser = sa.Column(sa.Integer, primary_key=True)
+            emailaddress = tws.TwsConfig(
+                        sa.Column(sa.String(50), nullable=False),
+                        validator_cls=twc.EmailValidator
+                        )
+            pwd = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        widget_cls=twf.PasswordField
+                    )
+            age = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        tabname='Account',
+                    )
+            postalcode = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        tabname='Contact information',
+                    )
+            country = tws.TwsConfig(
+                        sa.Column(sa.String(50)),
+                        tabname='Contact information',
+                    )
+
+            account = tws.TwsConfig(
+                        tabname='Account',
+                    )
+
+            def __unicode__(self):
+                return self.emailaddress
+
+        class DbTestCls14(Base):
+            __tablename__ = 'Test14'
+            account_id = sa.Column(sa.Integer, primary_key=True)
+            account_name = sa.Column(sa.String(50))
+            account_number = tws.TwsConfig(
+                                sa.Column(sa.String(50)),
+                                tabname='Tab 1',
+                            )
+            iduser = sa.Column( sa.Integer, sa.ForeignKey('Test13.iduser'), nullable=False)
+            user = sa.orm.relation( DbTestCls13, backref=sa.orm.backref('account', uselist=False))
+
+            def __unicode__(self):
+                return self.account_name
+
         self.DbTestCls1 = DbTestCls1
         self.DbTestCls2 = DbTestCls2
         self.DbTestCls3 = DbTestCls3
@@ -286,6 +391,8 @@ class SQLABase(object):
         self.DbTestCls10 = DbTestCls10
         self.DbTestCls11 = DbTestCls11
         self.DbTestCls12 = DbTestCls12
+        self.DbTestCls13 = DbTestCls13
+        self.DbTestCls14 = DbTestCls14
 
         Base.metadata.create_all()
 
@@ -317,6 +424,19 @@ class SQLABase(object):
         self.session.add(bob1)
         assert(self.DbTestCls8.query.first().user == bob1)
         assert(self.DbTestCls9.query.first().account == account1)
+        user = self.DbTestCls13(
+                iduser=1,
+                emailaddress='bob@plop.fr', 
+                pwd='my pass',
+                age=31,
+                postalcode='75012',
+                country='France')
+        self.session.add(user)
+        self.session.add(self.DbTestCls14(
+                account_id=1,
+                account_name='My account',
+                account_number='123456',
+                user=user))
         transaction.commit()
 
         return super(SQLABase, self).setup()
@@ -1708,6 +1828,165 @@ class AutoTableFormT12(WidgetTest):
 class TestAutoTableForm12Elixir(ElixirBase, AutoTableFormT12): pass
 class TestAutoTableForm12SQLA(SQLABase, AutoTableFormT12): pass
 
+class AutoTableFormT13(WidgetTest):
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls13)
+        return super(AutoTableFormT13, self).setup()
+
+    widget = tws.AutoTableForm
+    attrs = { 'id' : 'foo_form' }
+    expected = """
+<form method="post" id="foo_form:form" enctype="multipart/form-data">
+     <span class="error"></span>
+    <table id="foo_form">
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <div><div id="foo_form:tabs:wrapper">
+<div id="foo_form:tabs">
+    <ul>
+        <li><a href="#foo_form:tabs:0">Account</a></li>
+        <li><a href="#foo_form:tabs:1">Contact information</a></li>
+        <li><a href="#foo_form:tabs:2">General</a></li>
+    </ul>
+    <div id="foo_form:tabs:0">
+        <div><table>
+    <tr class="odd" id="foo_form:age:container">
+        <th>Age</th>
+        <td>
+            <input name="foo_form:age" id="foo_form:age" type="text" />
+            <span id="foo_form:age:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+        <div><table id="foo_form:account">
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <div><div id="foo_form:account:tabs:wrapper">
+<div id="foo_form:account:tabs">
+    <ul>
+        <li><a href="#foo_form:account:tabs:0">Tab 1</a></li>
+        <li><a href="#foo_form:account:tabs:1">General</a></li>
+    </ul>
+    <div id="foo_form:account:tabs:0">
+        <div><table>
+    <tr class="odd" id="foo_form:account:account_number:container">
+        <th>Account Number</th>
+        <td>
+            <input name="foo_form:account:account_number" id="foo_form:account:account_number" type="text" />
+            <span id="foo_form:account:account_number:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="foo_form:account:tabs:1">
+        <div><table>
+    <tr class="odd" id="foo_form:account:account_name:container">
+        <th>Account Name</th>
+        <td>
+            <input name="foo_form:account:account_name" id="foo_form:account:account_name" type="text" />
+            <span id="foo_form:account:account_name:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#foo_form\\\\:account\\\\:tabs").tabs({});
+});
+</script>
+</div></div>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="foo_form:account:error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="foo_form:tabs:1">
+        <div><table>
+    <tr class="odd" id="foo_form:postalcode:container">
+        <th>Postalcode</th>
+        <td>
+            <input name="foo_form:postalcode" id="foo_form:postalcode" type="text" />
+            <span id="foo_form:postalcode:error"></span>
+        </td>
+    </tr><tr class="even" id="foo_form:country:container">
+        <th>Country</th>
+        <td>
+            <input name="foo_form:country" id="foo_form:country" type="text" />
+            <span id="foo_form:country:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="foo_form:tabs:2">
+        <div><table>
+    <tr class="odd required" id="foo_form:emailaddress:container">
+        <th>Emailaddress</th>
+        <td>
+            <input name="foo_form:emailaddress" id="foo_form:emailaddress" type="text" />
+            <span id="foo_form:emailaddress:error"></span>
+        </td>
+    </tr><tr class="even" id="foo_form:pwd:container">
+        <th>Pwd</th>
+        <td>
+            <input name="foo_form:pwd" type="password" id="foo_form:pwd" />
+            <span id="foo_form:pwd:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#foo_form\\\\:tabs").tabs({});
+});
+</script>
+</div></div>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="foo_form:error"></span>
+    </td></tr>
+</table>
+    <input type="submit" id="submit" value="Save" />
+</form> 
+"""
+
+    declarative = True
+    def test_validation(self):
+        value = self.widget.validate({'foo_form': {'emailaddress': 'plop@plop.fr', 'account': {'account_name': 'my account'}}})
+        assert(value == {'postalcode': '', 'country': '', 'age': '', 'emailaddress': 'plop@plop.fr', 'account': {'account_number': '', 'account_name': 'my account'}})
+
+    def test_validation_required(self):
+        try:
+            value = self.widget.validate({'foo_form': {'emailaddress': ''}})
+            assert(False)
+        except twc.ValidationError, ve:
+            # The exception is raise but it's very strange that the error was lost
+            assert(ve.widget.error_msg == '')
+
+class TestAutoTableForm13Elixir(ElixirBase, AutoTableFormT13): pass
+class TestAutoTableForm13SQLA(SQLABase, AutoTableFormT13): pass
+
 class AutoViewGridT(WidgetTest):
     def setup(self):
         self.widget = self.widget(entity=self.DbTestCls1)
@@ -1761,6 +2040,24 @@ class AutoViewGrid11T(WidgetTest):
 
 class TestAutoViewGrid11Elixir(ElixirBase, AutoViewGrid11T): pass
 class TestAutoViewGrid11SQLA(SQLABase, AutoViewGrid11T): pass
+
+class AutoViewGrid13T(WidgetTest):
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls13)
+        return super(AutoViewGrid13T, self).setup()
+
+    widget = tws.AutoViewGrid
+    attrs = { 'id' : 'autogrid' }
+
+    expected = """
+    <table id="autogrid">
+    <tr><th>Emailaddress</th><th>Pwd</th><th>Age</th><th>Postalcode</th><th>Country</th><th>Account</th></tr>
+    <tr class="error"><td colspan="0" id="autogrid:error">
+    </td></tr>
+</table>"""
+
+class TestAutoViewGrid13Elixir(ElixirBase, AutoViewGrid13T): pass
+class TestAutoViewGrid13SQLA(SQLABase, AutoViewGrid13T): pass
 
 class AutoGrowingGridT(WidgetTest):
     def setup(self):
@@ -2555,6 +2852,502 @@ class AutoTableFormAsChildT(WidgetTest):
 class TestAutoTableFormAsChildTElixir(ElixirBase, AutoTableFormAsChildT): pass
 class TestAutoTableFormAsChildTSQLA(SQLABase, AutoTableFormAsChildT): pass
 
+class AutoTableForm14T(WidgetTest):
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls14)
+        return super(AutoTableForm14T, self).setup()
+
+    widget = tws.DbFormPage
+    attrs = { 'id' : 'autotable', 'title' : 'Test',
+              'child' : tws.AutoTableForm}
+    expected = """
+<html>
+<head><title>Test</title></head>
+<body id="autotable:page"><h1>Test</h1><form method="post" id="autotable:form" enctype="multipart/form-data">
+     <span class="error"></span>
+    <table id="autotable">
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <div><div id="autotable:tabs:wrapper">
+<div id="autotable:tabs">
+    <ul>
+        <li><a href="#autotable:tabs:0">Tab 1</a></li>
+        <li><a href="#autotable:tabs:1">General</a></li>
+    </ul>
+    <div id="autotable:tabs:0">
+        <div><table>
+    <tr class="odd" id="autotable:account_number:container">
+        <th>Account Number</th>
+        <td>
+            <input name="autotable:account_number" id="autotable:account_number" type="text" />
+            <span id="autotable:account_number:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="autotable:tabs:1">
+        <div><table>
+    <tr class="odd" id="autotable:account_name:container">
+        <th>Account Name</th>
+        <td>
+            <input name="autotable:account_name" id="autotable:account_name" type="text" />
+            <span id="autotable:account_name:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+        <div><table id="autotable:user">
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <div><div id="autotable:user:tabs:wrapper">
+<div id="autotable:user:tabs">
+    <ul>
+        <li><a href="#autotable:user:tabs:0">Account</a></li>
+        <li><a href="#autotable:user:tabs:1">Contact information</a></li>
+        <li><a href="#autotable:user:tabs:2">General</a></li>
+    </ul>
+    <div id="autotable:user:tabs:0">
+        <div><table>
+    <tr class="odd" id="autotable:user:age:container">
+        <th>Age</th>
+        <td>
+            <input name="autotable:user:age" id="autotable:user:age" type="text" />
+            <span id="autotable:user:age:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="autotable:user:tabs:1">
+        <div><table>
+    <tr class="odd" id="autotable:user:postalcode:container">
+        <th>Postalcode</th>
+        <td>
+            <input name="autotable:user:postalcode" id="autotable:user:postalcode" type="text" />
+            <span id="autotable:user:postalcode:error"></span>
+        </td>
+    </tr><tr class="even" id="autotable:user:country:container">
+        <th>Country</th>
+        <td>
+            <input name="autotable:user:country" id="autotable:user:country" type="text" />
+            <span id="autotable:user:country:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="autotable:user:tabs:2">
+        <div><table>
+    <tr class="odd required" id="autotable:user:emailaddress:container">
+        <th>Emailaddress</th>
+        <td>
+            <input name="autotable:user:emailaddress" id="autotable:user:emailaddress" type="text" />
+            <span id="autotable:user:emailaddress:error"></span>
+        </td>
+    </tr><tr class="even" id="autotable:user:pwd:container">
+        <th>Pwd</th>
+        <td>
+            <input name="autotable:user:pwd" type="password" id="autotable:user:pwd" />
+            <span id="autotable:user:pwd:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#autotable\\\\:user\\\\:tabs").tabs({});
+});
+</script>
+</div></div>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="autotable:user:error"></span>
+    </td></tr>
+</table></div>
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#autotable\\\\:tabs").tabs({});
+});
+</script>
+</div></div>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="autotable:error"></span>
+    </td></tr>
+</table>
+    <input type="submit" id="submit" value="Save" />
+</form></body>
+</html>
+"""
+
+    declarative = True
+    def test_request_get_edit(self):
+        environ = {
+            'REQUEST_METHOD': 'GET',
+            'QUERY_STRING' : 'account_id=1'
+        }
+        req=Request(environ)
+        self.mw.config.debug = True
+        r = self.widget().request(req)
+        tw2test.assert_eq_xml(r.body, """
+<html>
+<head><title>Test</title></head>
+<body id="autotable:page"><h1>Test</h1><form method="post" id="autotable:form" enctype="multipart/form-data">
+     <span class="error"></span>
+    <table id="autotable">
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <div><div id="autotable:tabs:wrapper">
+<div id="autotable:tabs">
+    <ul>
+        <li><a href="#autotable:tabs:0">Tab 1</a></li>
+        <li><a href="#autotable:tabs:1">General</a></li>
+    </ul>
+    <div id="autotable:tabs:0">
+        <div><table>
+    <tr class="odd" id="autotable:account_number:container">
+        <th>Account Number</th>
+        <td>
+            <input name="autotable:account_number" value="123456" id="autotable:account_number" type="text" />
+            <span id="autotable:account_number:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="autotable:tabs:1">
+        <div><table>
+    <tr class="odd" id="autotable:account_name:container">
+        <th>Account Name</th>
+        <td>
+            <input name="autotable:account_name" value="My account" id="autotable:account_name" type="text" />
+            <span id="autotable:account_name:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+        <div><table id="autotable:user">
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <div><div id="autotable:user:tabs:wrapper">
+<div id="autotable:user:tabs">
+    <ul>
+        <li><a href="#autotable:user:tabs:0">Account</a></li>
+        <li><a href="#autotable:user:tabs:1">Contact information</a></li>
+        <li><a href="#autotable:user:tabs:2">General</a></li>
+    </ul>
+    <div id="autotable:user:tabs:0">
+        <div><table>
+    <tr class="odd" id="autotable:user:age:container">
+        <th>Age</th>
+        <td>
+            <input name="autotable:user:age" value="31" id="autotable:user:age" type="text" />
+            <span id="autotable:user:age:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="autotable:user:tabs:1">
+        <div><table>
+    <tr class="odd" id="autotable:user:postalcode:container">
+        <th>Postalcode</th>
+        <td>
+            <input name="autotable:user:postalcode" value="75012" id="autotable:user:postalcode" type="text" />
+            <span id="autotable:user:postalcode:error"></span>
+        </td>
+    </tr><tr class="even" id="autotable:user:country:container">
+        <th>Country</th>
+        <td>
+            <input name="autotable:user:country" value="France" id="autotable:user:country" type="text" />
+            <span id="autotable:user:country:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="autotable:user:tabs:2">
+        <div><table>
+    <tr class="odd required" id="autotable:user:emailaddress:container">
+        <th>Emailaddress</th>
+        <td>
+            <input name="autotable:user:emailaddress" value="bob@plop.fr" id="autotable:user:emailaddress" type="text" />
+            <span id="autotable:user:emailaddress:error"></span>
+        </td>
+    </tr><tr class="even" id="autotable:user:pwd:container">
+        <th>Pwd</th>
+        <td>
+            <input name="autotable:user:pwd" type="password" id="autotable:user:pwd" />
+            <span id="autotable:user:pwd:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#autotable\\\\:user\\\\:tabs").tabs({});
+});
+</script>
+</div></div>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="autotable:user:error"></span>
+    </td></tr>
+</table></div>
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#autotable\\\\:tabs").tabs({});
+});
+</script>
+</div></div>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="autotable:error"></span>
+    </td></tr>
+</table>
+    <input type="submit" id="submit" value="Save" />
+</form></body>
+</html> 
+""")
+
+    def test_request_post_redirect(self):
+        environ = {'wsgi.input': StringIO('')}
+        req=Request(environ)
+        req.method = 'POST'
+        req.body='autotable:account_name=plop&autotable:user:emailaddress=plop@plop.fr'
+        req.environ['CONTENT_LENGTH'] = str(len(req.body))
+        req.environ['CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
+
+        self.mw.config.debug = True
+        r = self.widget(redirect="/foo").request(req)
+        assert( r.status_int == 302 and r.location=="/foo" )
+
+    def test_request_get(self):
+        environ = {'REQUEST_METHOD': 'GET', 'QUERY_STRING' :'account_name=My account'}
+        req=Request(environ)
+        assert(req.GET)
+        r = self.widget().request(req)
+        tw2test.assert_eq_xml(r.body, """
+<html>
+<head><title>Test</title></head>
+<body id="autotable:page"><h1>Test</h1><form method="post" id="autotable:form" enctype="multipart/form-data">
+     <span class="error"></span>
+    <table id="autotable">
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <div><div id="autotable:tabs:wrapper">
+<div id="autotable:tabs">
+    <ul>
+        <li><a href="#autotable:tabs:0">Tab 1</a></li>
+        <li><a href="#autotable:tabs:1">General</a></li>
+    </ul>
+    <div id="autotable:tabs:0">
+        <div><table>
+    <tr class="odd" id="autotable:account_number:container">
+        <th>Account Number</th>
+        <td>
+            <input name="autotable:account_number" value="123456" id="autotable:account_number" type="text" />
+            <span id="autotable:account_number:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="autotable:tabs:1">
+        <div><table>
+    <tr class="odd" id="autotable:account_name:container">
+        <th>Account Name</th>
+        <td>
+            <input name="autotable:account_name" value="My account" id="autotable:account_name" type="text" />
+            <span id="autotable:account_name:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+        <div><table id="autotable:user">
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <div><div id="autotable:user:tabs:wrapper">
+<div id="autotable:user:tabs">
+    <ul>
+        <li><a href="#autotable:user:tabs:0">Account</a></li>
+        <li><a href="#autotable:user:tabs:1">Contact information</a></li>
+        <li><a href="#autotable:user:tabs:2">General</a></li>
+    </ul>
+    <div id="autotable:user:tabs:0">
+        <div><table>
+    <tr class="odd" id="autotable:user:age:container">
+        <th>Age</th>
+        <td>
+            <input name="autotable:user:age" value="31" id="autotable:user:age" type="text" />
+            <span id="autotable:user:age:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="autotable:user:tabs:1">
+        <div><table>
+    <tr class="odd" id="autotable:user:postalcode:container">
+        <th>Postalcode</th>
+        <td>
+            <input name="autotable:user:postalcode" value="75012" id="autotable:user:postalcode" type="text" />
+            <span id="autotable:user:postalcode:error"></span>
+        </td>
+    </tr><tr class="even" id="autotable:user:country:container">
+        <th>Country</th>
+        <td>
+            <input name="autotable:user:country" value="France" id="autotable:user:country" type="text" />
+            <span id="autotable:user:country:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+    <div id="autotable:user:tabs:2">
+        <div><table>
+    <tr class="odd required" id="autotable:user:emailaddress:container">
+        <th>Emailaddress</th>
+        <td>
+            <input name="autotable:user:emailaddress" value="bob@plop.fr" id="autotable:user:emailaddress" type="text" />
+            <span id="autotable:user:emailaddress:error"></span>
+        </td>
+    </tr><tr class="even" id="autotable:user:pwd:container">
+        <th>Pwd</th>
+        <td>
+            <input name="autotable:user:pwd" type="password" id="autotable:user:pwd" />
+            <span id="autotable:user:pwd:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#autotable\\\\:user\\\\:tabs").tabs({});
+});
+</script>
+</div></div>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="autotable:user:error"></span>
+    </td></tr>
+</table></div>
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#autotable\\\\:tabs").tabs({});
+});
+</script>
+</div></div>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id="autotable:error"></span>
+    </td></tr>
+</table>
+    <input type="submit" id="submit" value="Save" />
+</form></body>
+</html> 
+""")
+
+    def test_request_post_valid(self):
+        environ = {'wsgi.input': StringIO('')}
+        req=Request(environ)
+        req.method = 'POST'
+        req.body='autotable:account_name=plop&autotable:user:emailaddress=plop@plop.fr'
+        req.environ['CONTENT_LENGTH'] = str(len(req.body))
+        req.environ['CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
+
+        self.mw.config.debug = True
+        r = self.widget().request(req)
+        assert """Form posted successfully {'account_name': u'plop', 'user': {'postalcode': '', 'country': '', 'age': '', 'emailaddress': u'plop@plop.fr'}, 'account_number': ''}""" in r.body, r.body
+
+    def test_request_post_counts_new(self):
+        environ = {'wsgi.input': StringIO('')}
+        req=Request(environ)
+        req.method = 'POST'
+        req.body='autotable:account_name=plop&autotable:user:emailaddress=plop@plop.fr'
+        req.environ['CONTENT_LENGTH'] = str(len(req.body))
+        req.environ['CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
+
+        self.mw.config.debug = True
+        assert(self.DbTestCls13.query.count() == 1)
+        assert(self.DbTestCls14.query.count() == 1)
+        r = self.widget().request(req)
+        assert(self.DbTestCls13.query.count() == 2)
+        assert(self.DbTestCls14.query.count() == 2)
+
+    def test_request_post_counts_update(self):
+        environ = {'wsgi.input': StringIO(''), 'QUERY_STRING': 'id=1'}
+        req=Request(environ)
+        req.method = 'POST'
+        req.body='autotable:account_id=1&autotable:account_name=plop&autotable:user:emailaddress=plop@plop.fr'
+        req.environ['CONTENT_LENGTH'] = str(len(req.body))
+        req.environ['CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
+
+        self.mw.config.debug = True
+        assert(self.DbTestCls13.query.count() == 1)
+        assert(self.DbTestCls14.query.count() == 1)
+        r = self.widget().request(req)
+        assert(self.DbTestCls13.query.count() == 1)
+        assert(self.DbTestCls14.query.count() == 1)
+
+class TestAutoTableForm14TElixir(ElixirBase, AutoTableForm14T): pass
+class TestAutoTableForm14TSQLA(SQLABase, AutoTableForm14T): pass
+
 class FormPageRequiredCheckboxT(WidgetTest):
     def setup(self):
         attrs = {
@@ -2822,3 +3615,243 @@ class FormPageRequiredCheckboxT(WidgetTest):
 
 class TestFormPageRequiredCheckboxTElixir(ElixirBase, FormPageRequiredCheckboxT): pass
 class TestFormPageRequiredCheckboxTSQLA(SQLABase, FormPageRequiredCheckboxT): pass
+
+class AutoViewFieldSetT(WidgetTest):
+    widget = tws.widgets.AutoViewFieldSet
+    expected = """
+    <fieldset>
+    <legend></legend>
+    <table>
+    <tr class="odd" id="name:container">
+        <th>Name</th>
+        <td>
+            <span><input name="name" type="hidden" id="name" /></span>
+            <span id="name:error"></span>
+        </td>
+    </tr><tr class="even" id="others:container">
+        <th>Others</th>
+        <td>
+            <table id="others">
+    <tr><th>Nick</th><th>Other</th></tr>
+    <tr class="error"><td colspan="0" id="others:error">
+    </td></tr>
+</table>
+            <span id="others:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table>
+</fieldset>
+"""
+
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls1)
+        return super(AutoViewFieldSetT, self).setup()
+
+class TestAutoViewFieldsetElixir(ElixirBase, AutoViewFieldSetT): pass
+class TestAutoViewFieldsetSQLA(SQLABase, AutoViewFieldSetT): pass
+
+class AutoEditFieldSetT(WidgetTest):
+    widget = tws.widgets.AutoEditFieldSet
+    expected = """
+<fieldset>
+    <legend></legend>
+    <table>
+    <tr class="odd" id="name:container">
+        <th>Name</th>
+        <td>
+            <input name="name" id="name" type="text" />
+            <span id="name:error"></span>
+        </td>
+    </tr><tr class="even" id="others:container">
+        <th>Others</th>
+        <td>
+            <ul id="others">
+            <li>
+                <input type="checkbox" name="others" value="1" id="others:0" />
+                <label for="others:0">bob1</label>
+            </li><li>
+                <input type="checkbox" name="others" value="2" id="others:1" />
+                <label for="others:1">bob2</label>
+            </li><li>
+                <input type="checkbox" name="others" value="3" id="others:2" />
+                <label for="others:2">bob3</label>
+            </li>
+</ul>
+            <span id="others:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table>
+</fieldset>
+"""
+
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls1)
+        return super(AutoEditFieldSetT, self).setup()
+
+class TestAutoEditFieldsetElixir(ElixirBase, AutoEditFieldSetT): pass
+class TestAutoEditFieldsetSQLA(SQLABase, AutoEditFieldSetT): pass
+
+class TestEmptyWidget(WidgetTest):
+    widget = tws.widgets.EmptyWidget
+    attrs = {'child': twf.TableLayout(field1=twf.TextField(id='field1'))}
+    expected = """
+    <div><table>
+    <tr class="odd" id="field1:container">
+        <th>Field1</th>
+        <td>
+            <input name="field1" id="field1" type="text" />
+            <span id="field1:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>"""
+
+
+class TestEmptyTableWidget(WidgetTest):
+    widget = tws.widgets.EmptyTableWidget
+    attrs = {'children': [twf.TextField(id='field1'),
+                          twf.TextField(id='field2'),
+                          twf.TextField(id='field3')],
+             }
+    expected = """
+    <div><table>
+    <tr class="odd" id="field1:container">
+        <th>Field1</th>
+        <td>
+            <input name="field1" id="field1" type="text" />
+            <span id="field1:error"></span>
+        </td>
+    </tr><tr class="even" id="field2:container">
+        <th>Field2</th>
+        <td>
+            <input name="field2" id="field2" type="text" />
+            <span id="field2:error"></span>
+        </td>
+    </tr><tr class="odd" id="field3:container">
+        <th>Field3</th>
+        <td>
+            <input name="field3" id="field3" type="text" />
+            <span id="field3:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>"""
+
+class AutoEditEmptyWidgetT(WidgetTest):
+    widget = tws.widgets.AutoEditEmptyWidget
+    expected = """
+    <div><table>
+    <tr class="odd" id="name:container">
+        <th>Name</th>
+        <td>
+            <input name="name" id="name" type="text" />
+            <span id="name:error"></span>
+        </td>
+    </tr><tr class="even" id="others:container">
+        <th>Others</th>
+        <td>
+            <ul id="others">
+            <li>
+                <input type="checkbox" name="others" value="1" id="others:0" />
+                <label for="others:0">bob1</label>
+            </li><li>
+                <input type="checkbox" name="others" value="2" id="others:1" />
+                <label for="others:1">bob2</label>
+            </li><li>
+                <input type="checkbox" name="others" value="3" id="others:2" />
+                <label for="others:2">bob3</label>
+            </li>
+</ul>
+            <span id="others:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table></div>
+"""
+
+    def setup(self):
+        self.widget = self.widget(entity=self.DbTestCls1)
+        return super(AutoEditEmptyWidgetT, self).setup()
+
+class TestAutoEditEmptyWidgetElixir(ElixirBase, AutoEditEmptyWidgetT): pass
+class TestAutoEditEmptyWidgetSQLA(SQLABase, AutoEditEmptyWidgetT): pass
+
+class TestTabsLayout(WidgetTest):
+    widget = tws.widgets.TabsLayout
+    children = [twf.TextField(id='field1'),
+                twf.TextField(id='field2'),
+                twf.TextField(id='field3')]
+    for index, c in enumerate(children):
+        c._tws_tabname = 'tab %i' % (index % 2)
+    
+    attrs = {'children': children} 
+
+    expected = """
+    <div id="tabs:wrapper">
+<div id="tabs">
+    <ul>
+        <li><a href="#tabs:0">tab 0</a></li>
+        <li><a href="#tabs:1">tab 1</a></li>
+    </ul>
+    <div id="tabs:0">
+        <input name="field1" type="text" id="field1" />
+        <input name="field3" type="text" id="field3" />
+    </div>
+    <div id="tabs:1">
+        <input name="field2" type="text" id="field2" />
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#tabs").tabs({});
+});
+</script>
+</div>
+"""
+
+class TestTabsWidget(WidgetTest):
+    widget = tws.widgets.TabsWidget
+    children = [twf.TextField(id='field1'),
+                twf.TextField(id='field2'),
+                twf.TextField(id='field3')]
+    for index, c in enumerate(children):
+        c._tws_tabname = 'tab %i' % (index % 2)
+    
+    attrs = {'children': children} 
+
+    expected = """
+    <div>
+    <div id="tabs:wrapper">
+<div id="tabs">
+    <ul>
+        <li><a href="#tabs:0">tab 0</a></li>
+        <li><a href="#tabs:1">tab 1</a></li>
+    </ul>
+    <div id="tabs:0">
+        <input name="field1" type="text" id="field1" />
+        <input name="field3" type="text" id="field3" />
+    </div>
+    <div id="tabs:1">
+        <input name="field2" type="text" id="field2" />
+    </div>
+</div>
+<script type="text/javascript">
+$(document).ready(function() {
+    $("#tabs").tabs({});
+});
+</script>
+</div>
+</div>
+"""

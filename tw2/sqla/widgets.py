@@ -1,4 +1,6 @@
 import tw2.core as twc, tw2.forms as twf, webob, sqlalchemy as sa, sys
+from tw2.core.resources import encoder
+import tw2.jqplugins.ui as twjui
 import sqlalchemy.types as sat, tw2.dynforms as twd
 from zope.sqlalchemy import ZopeTransactionExtension
 import transaction, utils
@@ -12,6 +14,8 @@ except ImportError:
         for i in x:
             for j in y:
                 yield (i,j)
+
+DEFAULT_TAB_NAME = 'General'
 
 def is_relation(prop):
     return isinstance(prop, sa.orm.RelationshipProperty)
@@ -124,6 +128,54 @@ def get_reverse_property_name(prop):
     
     assert len(prop._reverse_property) == 1
     return list(prop._reverse_property)[0].key
+
+
+def group_widgets_by_tab(widgets, config):
+    """Returns list of widgets
+
+    We group the given widgets by tabs defined in config. If we find some tabs
+    generate a TabsWidget.
+    NOTE: All this generated widgets don't have an id defined to make sure this
+    widgets are ignored when we generate the compound_id.
+    """
+    if not bool([conf for conf in config.values() if conf.tabname]):
+        return widgets
+    
+    # 1) Group the widgets by tabname
+    tabs_children = {}
+    for c in widgets:
+        tabname = None
+        conf = config.get(c.key)
+        if conf:
+            tabname = conf.tabname
+        tabs_children.setdefault(tabname, []).append(c)
+
+    # 2) Generate the new widgets which will contain the given ones.
+    dic = {}
+    for tabname, fields in tabs_children.items():
+        fields_for_tab = []
+        other_fields = []
+        for field in fields:
+            if hasattr(field, 'reverse_property_name'):
+                # The one to one fields already have a container widget
+               other_fields += [field]
+            else:
+                fields_for_tab += [field]
+
+        tabname = tabname or DEFAULT_TAB_NAME
+        lis = []
+        if fields_for_tab:
+            lis += [EmptyTableWidget(id=None, children=fields_for_tab, _tws_tabname=tabname)()]
+
+        for field in other_fields:
+            field._tws_tabname = tabname
+            lis += [field]
+        dic[tabname] =  lis
+
+    # 3) Create the TabsWidget container
+    TabsWidget.child = TabsWidget.child(id=None, children=sum(dic.values(), []))
+    return [TabsWidget]
+
 
 class RelatedValidator(twc.IntValidator):
     """Validator for related object
@@ -270,9 +322,15 @@ class DbFormPage(DbPage, twf.FormPage):
 
     @classmethod
     def validated_request(cls, req, data, protect_prm_tamp=True, do_commit=True):
-        if 'id' not in data and 'id' in req.GET:
-            # If the 'id' is in the query string, we get it
-            data['id'] = req.GET['id']
+
+        if hasattr(cls, 'entity'):
+            pk_props = sa.orm.class_mapper(cls.entity).primary_key
+            if len(pk_props) == 1:
+                pk_name = pk_props[0].key
+                value = req.GET.get(pk_name) or req.GET.get('id')
+                if value:
+                    # If the 'id' is in the query string, we get it
+                    data[pk_name] = value
         utils.update_or_create(cls.entity, data,
                                protect_prm_tamp=protect_prm_tamp)
         if do_commit:
@@ -444,10 +502,12 @@ class WidgetPolicy(object):
 
         widget_cls = None
         validator_cls = None
+        tabname = None
         if config and config.get(prop.key) and cls.config_available:
             prop_config = config.get(prop.key, {})
             widget_cls = prop_config.widget_cls
             validator_cls = prop_config.validator_cls
+            tabname = prop_config.tabname
 
         if widget_cls:
             # Get the widget from the config first
@@ -478,7 +538,12 @@ class WidgetPolicy(object):
                 raise twc.WidgetError(
                     "Cannot automatically create a widget " +
                     "for one-to-one relation '%s'" % prop.key)
-            widget = cls.onetoone_widget
+            reverse_config = getattr(prop.mapper.class_, '_tws_config', {})
+            contains_tab = bool([conf for conf in reverse_config.values() if conf.tabname])
+            if tabname or contains_tab:
+                widget = AutoEditEmptyWidget
+            else:
+                widget = cls.onetoone_widget
         elif prop.key in cls.name_widgets:
             widget = cls.name_widgets[prop.key]
         else:
@@ -528,7 +593,7 @@ class ViewPolicy(WidgetPolicy):
     ## This gets assigned further down in the file.  It must, because of an
     ## otherwise circular dependency.
     #onetomany_widget = AutoViewGrid
-    #onetoone_widget = AutoViewGrid
+    #onetoone_widget = AutoViewFieldSet
 
 
 class EditPolicy(WidgetPolicy):
@@ -542,7 +607,7 @@ class EditPolicy(WidgetPolicy):
 
     ## This gets assigned further down in the file.  It must, because of an
     ## otherwise circular dependency.
-    #onetoone_widget = AutoEditGrid
+    #onetoone_widget = AutoEditFieldSet
     name_widgets = {
         'password':     twf.PasswordField,
         'email':        twf.TextField(validator=twc.EmailValidator),
@@ -632,8 +697,10 @@ class AutoContainer(twc.Widget):
                        w.key not in [W.key for W in new_children]
 
             new_children.extend(filter(child_filter, orig_children))
-            cls.child = cls.child(children=new_children, entity=cls.entity)
+            if cls.policy.config_available:
+                new_children = group_widgets_by_tab(new_children, cls_config)
 
+            cls.child = cls.child(children=new_children, entity=cls.entity, id=None)
 
 class AutoTableForm(AutoContainer, twf.TableForm):
     policy = EditPolicy
@@ -648,6 +715,28 @@ class AutoViewFieldSet(AutoContainer, twf.TableFieldSet):
     policy = ViewPolicy
 
 class AutoEditFieldSet(AutoContainer, twf.TableFieldSet):
+    policy = EditPolicy
+
+    def post_define(cls):
+        if getattr(cls, 'entity', None):
+            required=getattr(cls, 'required', False)
+            cls.validator = RelatedOneToOneValidator(entity=cls.entity, required=required)
+
+class EmptyWidget(twc.DisplayOnlyWidget):
+    """
+    This is an empty widget. We just add a '<div>' as container since it seems
+    genshi doesn't support template without any tag. This tab doesn't have any
+    attributes.
+    """
+    template = "tw2.sqla.templates.empty"
+
+class EmptyTableWidget(EmptyWidget):
+    """This widget display the children in a table.
+    """
+    child = twc.Variable(default=twf.TableLayout)
+    children = twc.Required
+
+class AutoEditEmptyWidget(AutoContainer, EmptyTableWidget):
     policy = EditPolicy
 
     def post_define(cls):
@@ -670,6 +759,38 @@ class AutoListPageEdit(AutoListPage):
         _no_autoid = True
         child = AutoTableForm
 
+class TabsLayout(twf.TableLayout):
+    """
+    NOTE: we can't use twjui.TabsWidget since an id is required.
+          Here we just use the id to generate the tabs, we don't want the id in the
+          form's fields
+    """
+    template = "tw2.sqla.templates.tabs"
+    resources = [ twjui.jquery_ui_js, twjui.jquery_ui_css ]
+    titles = []
+    fields = []
+    jqmethod = "tabs"
+    selector = twc.Variable("(str) Escaped id.  jQuery selector.")
+    options = twc.Param(
+        '(dict) A dict of options to pass to the widget', default={})
+    events = twc.Param(
+        '(dict) (BETA) javascript callbacks for events', default={})
+
+    def prepare(self):
+        super(TabsLayout, self).prepare()
+        self.items = {}
+        for child in self.children:
+            self.items.setdefault(child._tws_tabname, []).append(child)
+
+        self.attrs['id'] = 'tabs'
+        self.options = encoder.encode(self.options)
+        if self.parent and self.parent.parent: # Condition for the tests
+            self.attrs['id'] = self.parent.parent.attrs['id'] + ':tabs'
+        self.selector = self.attrs['id'].replace(':', '\\\\:')
+
+class TabsWidget(EmptyWidget):
+    child = TabsLayout
+    id = None # We never want to use an id for this widget
 
 # Borrowed from TG2
 def commit_veto(environ, status, headers):
