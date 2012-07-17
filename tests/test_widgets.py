@@ -121,11 +121,13 @@ class ElixirBase(object):
             iduser = el.Field(el.Integer, primary_key=True)
             emailaddress = tws.TwsConfig(
                         el.Field(el.String, required=True),
-                        validator_cls=twc.EmailValidator
+                        validator_cls=twc.EmailValidator,
+                        groupname='group'
                         )
             pwd = tws.TwsConfig(
                         el.Field(el.String),
-                        widget_cls=twf.PasswordField
+                        widget_cls=twf.PasswordField,
+                        groupname='group'
                     )
             age = tws.TwsConfig(
                         el.Field(el.String),
@@ -134,10 +136,12 @@ class ElixirBase(object):
             postalcode = tws.TwsConfig(
                         el.Field(el.String),
                         tabname='Contact information',
+                        groupname='group'
                     )
             country = tws.TwsConfig(
                         el.Field(el.String),
                         tabname='Contact information',
+                        groupname='group'
                     )
 
             account = tws.TwsConfig(
@@ -339,11 +343,13 @@ class SQLABase(object):
             iduser = sa.Column(sa.Integer, primary_key=True)
             emailaddress = tws.TwsConfig(
                         sa.Column(sa.String(50), nullable=False),
-                        validator_cls=twc.EmailValidator
+                        validator_cls=twc.EmailValidator,
+                        groupname='group'
                         )
             pwd = tws.TwsConfig(
                         sa.Column(sa.String(50)),
-                        widget_cls=twf.PasswordField
+                        widget_cls=twf.PasswordField,
+                        groupname='group'
                     )
             age = tws.TwsConfig(
                         sa.Column(sa.String(50)),
@@ -352,10 +358,12 @@ class SQLABase(object):
             postalcode = tws.TwsConfig(
                         sa.Column(sa.String(50)),
                         tabname='Contact information',
+                        groupname='group'
                     )
             country = tws.TwsConfig(
                         sa.Column(sa.String(50)),
                         tabname='Contact information',
+                        groupname='group'
                     )
 
             account = tws.TwsConfig(
@@ -1915,17 +1923,30 @@ $(document).ready(function() {
     </div>
     <div id="foo_form:tabs:1">
         <div><table>
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <fieldset>
+    <legend>group</legend>
+    <table>
     <tr class="odd" id="foo_form:postalcode:container">
         <th>Postalcode</th>
         <td>
-            <input name="foo_form:postalcode" id="foo_form:postalcode" type="text" />
+            <input name="foo_form:postalcode" type="text" id="foo_form:postalcode" />
             <span id="foo_form:postalcode:error"></span>
         </td>
     </tr><tr class="even" id="foo_form:country:container">
         <th>Country</th>
         <td>
-            <input name="foo_form:country" id="foo_form:country" type="text" />
+            <input name="foo_form:country" type="text" id="foo_form:country" />
             <span id="foo_form:country:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table>
+</fieldset>
+            <span id=":error"></span>
         </td>
     </tr>
     <tr class="error"><td colspan="2">
@@ -1935,10 +1956,15 @@ $(document).ready(function() {
     </div>
     <div id="foo_form:tabs:2">
         <div><table>
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <fieldset>
+    <legend>group</legend>
+    <table>
     <tr class="odd required" id="foo_form:emailaddress:container">
         <th>Emailaddress</th>
         <td>
-            <input name="foo_form:emailaddress" id="foo_form:emailaddress" type="text" />
+            <input name="foo_form:emailaddress" type="text" id="foo_form:emailaddress" />
             <span id="foo_form:emailaddress:error"></span>
         </td>
     </tr><tr class="even" id="foo_form:pwd:container">
@@ -1946,6 +1972,14 @@ $(document).ready(function() {
         <td>
             <input name="foo_form:pwd" type="password" id="foo_form:pwd" />
             <span id="foo_form:pwd:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table>
+</fieldset>
+            <span id=":error"></span>
         </td>
     </tr>
     <tr class="error"><td colspan="2">
@@ -2927,6 +2961,11 @@ class AutoTableForm14T(WidgetTest):
     </div>
     <div id="autotable:user:tabs:1">
         <div><table>
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <fieldset>
+    <legend>group</legend>
+    <table>
     <tr class="odd" id="autotable:user:postalcode:container">
         <th>Postalcode</th>
         <td>
@@ -2943,10 +2982,23 @@ class AutoTableForm14T(WidgetTest):
     <tr class="error"><td colspan="2">
         <span id=":error"></span>
     </td></tr>
+</table>
+</fieldset>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
 </table></div>
     </div>
     <div id="autotable:user:tabs:2">
         <div><table>
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <fieldset>
+    <legend>group</legend>
+    <table>
     <tr class="odd required" id="autotable:user:emailaddress:container">
         <th>Emailaddress</th>
         <td>
@@ -2958,6 +3010,14 @@ class AutoTableForm14T(WidgetTest):
         <td>
             <input name="autotable:user:pwd" type="password" id="autotable:user:pwd" />
             <span id="autotable:user:pwd:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table>
+</fieldset>
+            <span id=":error"></span>
         </td>
     </tr>
     <tr class="error"><td colspan="2">
@@ -2996,7 +3056,7 @@ $(document).ready(function() {
 </table>
     <input type="submit" id="submit" value="Save" />
 </form></body>
-</html>
+</html> 
 """
 
     declarative = True
@@ -3075,6 +3135,11 @@ $(document).ready(function() {
     </div>
     <div id="autotable:user:tabs:1">
         <div><table>
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <fieldset>
+    <legend>group</legend>
+    <table>
     <tr class="odd" id="autotable:user:postalcode:container">
         <th>Postalcode</th>
         <td>
@@ -3091,10 +3156,23 @@ $(document).ready(function() {
     <tr class="error"><td colspan="2">
         <span id=":error"></span>
     </td></tr>
+</table>
+</fieldset>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
 </table></div>
     </div>
     <div id="autotable:user:tabs:2">
         <div><table>
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <fieldset>
+    <legend>group</legend>
+    <table>
     <tr class="odd required" id="autotable:user:emailaddress:container">
         <th>Emailaddress</th>
         <td>
@@ -3106,6 +3184,14 @@ $(document).ready(function() {
         <td>
             <input name="autotable:user:pwd" type="password" id="autotable:user:pwd" />
             <span id="autotable:user:pwd:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table>
+</fieldset>
+            <span id=":error"></span>
         </td>
     </tr>
     <tr class="error"><td colspan="2">
@@ -3144,7 +3230,7 @@ $(document).ready(function() {
 </table>
     <input type="submit" id="submit" value="Save" />
 </form></body>
-</html> 
+</html>
 """)
 
     def test_request_post_redirect(self):
@@ -3165,7 +3251,7 @@ $(document).ready(function() {
         assert(req.GET)
         r = self.widget().request(req)
         tw2test.assert_eq_xml(r.body, """
-<html>
+ <html>
 <head><title>Test</title></head>
 <body id="autotable:page"><h1>Test</h1><form method="post" id="autotable:form" enctype="multipart/form-data">
      <span class="error"></span>
@@ -3231,6 +3317,11 @@ $(document).ready(function() {
     </div>
     <div id="autotable:user:tabs:1">
         <div><table>
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <fieldset>
+    <legend>group</legend>
+    <table>
     <tr class="odd" id="autotable:user:postalcode:container">
         <th>Postalcode</th>
         <td>
@@ -3247,10 +3338,23 @@ $(document).ready(function() {
     <tr class="error"><td colspan="2">
         <span id=":error"></span>
     </td></tr>
+</table>
+</fieldset>
+            <span id=":error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
 </table></div>
     </div>
     <div id="autotable:user:tabs:2">
         <div><table>
+    <tr class="odd" id=":container">
+        <td colspan="2">
+            <fieldset>
+    <legend>group</legend>
+    <table>
     <tr class="odd required" id="autotable:user:emailaddress:container">
         <th>Emailaddress</th>
         <td>
@@ -3262,6 +3366,14 @@ $(document).ready(function() {
         <td>
             <input name="autotable:user:pwd" type="password" id="autotable:user:pwd" />
             <span id="autotable:user:pwd:error"></span>
+        </td>
+    </tr>
+    <tr class="error"><td colspan="2">
+        <span id=":error"></span>
+    </td></tr>
+</table>
+</fieldset>
+            <span id=":error"></span>
         </td>
     </tr>
     <tr class="error"><td colspan="2">

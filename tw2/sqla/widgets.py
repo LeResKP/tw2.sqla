@@ -129,6 +129,32 @@ def get_reverse_property_name(prop):
     assert len(prop._reverse_property) == 1
     return list(prop._reverse_property)[0].key
 
+def group_widgets_by_group(widgets, config):
+    """Returns list of widgets
+
+    We group the given widgets by groupname defined in config.
+    """
+    if not bool([conf for conf in config.values() if conf.groupname]):
+        return widgets
+
+    # 1) Group the widgets by groupname
+    groups_children = {}
+    for c in widgets:
+        groupname = None
+        conf = config.get(c.key)
+        if conf:
+            groupname = conf.groupname
+        groups_children.setdefault(groupname, []).append(c)
+    
+    # 2) Generate the fieldsets
+    other_fields = []
+    fieldset_fields = []
+    for groupname, fields in groups_children.items():
+        if groupname:
+            fieldset_fields += [twf.TableFieldSet(id=None, children=fields, legend=groupname)]
+        else:
+            other_fields += fields
+    return other_fields + fieldset_fields
 
 def group_widgets_by_tab(widgets, config):
     """Returns list of widgets
@@ -139,7 +165,7 @@ def group_widgets_by_tab(widgets, config):
     widgets are ignored when we generate the compound_id.
     """
     if not bool([conf for conf in config.values() if conf.tabname]):
-        return widgets
+        return group_widgets_by_group(widgets, config)
     
     # 1) Group the widgets by tabname
     tabs_children = {}
@@ -165,6 +191,7 @@ def group_widgets_by_tab(widgets, config):
         tabname = tabname or DEFAULT_TAB_NAME
         lis = []
         if fields_for_tab:
+            fields_for_tab = group_widgets_by_group(fields_for_tab, config)
             lis += [EmptyTableWidget(id=None, children=fields_for_tab, _tws_tabname=tabname)()]
 
         for field in other_fields:

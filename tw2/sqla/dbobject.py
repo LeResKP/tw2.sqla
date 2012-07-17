@@ -23,6 +23,7 @@ class TwsConfig(object):
             widget_cls=None,
             validator_cls=None,
             tabname=None,
+            groupname=None,
             ):
         self.__dict__.update(locals())
 

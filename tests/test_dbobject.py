@@ -29,6 +29,14 @@ class BaseObject(object):
         assert(config['emailaddress'].widget_cls == None)
         assert(config['emailaddress'].validator_cls == twc.EmailValidator)
 
+    def test_group_and_tab_name(self):
+        config = self.DbTestCls3._tws_config
+        assert(len(config) == 3)
+        assert(config['pwd'].groupname == 'group name')
+        assert(config['pwd'].tabname == None)
+        assert(config['emailaddress'].groupname == None)
+        assert(config['emailaddress'].tabname == 'tab name')
+
     def test_automatic_id(self):
         assert(type(self.DbTestCls3.id) == property)
         obj = self.DbTestCls3.query.first()
@@ -75,11 +83,13 @@ class TestElixir(BaseObject):
                     )
             pwd = tws.TwsConfig(
                         el.Field(el.String),
-                        widget_cls=twf.PasswordField
+                        widget_cls=twf.PasswordField,
+                        groupname='group name'
                         )
             emailaddress = tws.TwsConfig(
                         el.Field(el.String),
-                        validator_cls=twc.EmailValidator
+                        validator_cls=twc.EmailValidator,
+                        tabname='tab name'
                         )
         
         self.DbTestCls1 = DbTestCls1
@@ -132,11 +142,13 @@ class TestSQLA(BaseObject):
                     )
             pwd = tws.TwsConfig(
                         sa.Column(sa.String(50)),
-                        widget_cls=twf.PasswordField
+                        widget_cls=twf.PasswordField,
+                        groupname='group name'
                     )
             emailaddress = tws.TwsConfig(
                         sa.Column(sa.String(50)),
-                        validator_cls=twc.EmailValidator
+                        validator_cls=twc.EmailValidator,
+                        tabname='tab name'
                         )
 
         self.DbTestCls1 = DbTestCls1
